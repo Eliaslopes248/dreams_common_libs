@@ -60,6 +60,7 @@ class DatabaseService(ABC):
         query: str,
         params: tuple = None,
         expects_return: bool = True,
+        commit: bool = True
     ) -> tuple[Any, RC]:
         """Execute a query string against the database."""
         ...
@@ -69,6 +70,7 @@ class DatabaseService(ABC):
         self,
         query: str,
         params: list[tuple],
+        commit: bool = True
     ) -> tuple[Any, RC]:
         """Execute a query with multiple sets of parameters."""
         ...
@@ -157,7 +159,7 @@ class SupabaseService(DatabaseService):
             logger.error(f"Unable to get connection from server pool. {e}")
             return None
 
-    def ExecuteQuery(self, query: str, params: tuple = None, expects_return: bool = True) -> tuple[Any, RC]:
+    def ExecuteQuery(self, query: str, params: tuple = None, expects_return: bool = True, commit: bool = True) -> tuple[Any, RC]:
         """This method will execute a string PostgreSQL query."""
 
         # Get connection from pool
@@ -184,7 +186,8 @@ class SupabaseService(DatabaseService):
                 results = cursor.fetchall()
 
             # Persist writes; psycopg rolls back on return-to-pool otherwise
-            connection.commit()
+            if commit:
+                connection.commit()
             logger.info(f"PostgreSQL command executed successfully.")
 
         except Exception as e:
@@ -202,6 +205,7 @@ class SupabaseService(DatabaseService):
         self,
         query: str,
         params: list[tuple],
+        commit: bool = True,
     ) -> tuple[Any, RC]:
         """Execute a PostgreSQL query with multiple sets of parameters."""
 
@@ -220,7 +224,8 @@ class SupabaseService(DatabaseService):
             cursor.executemany(query, params)
 
             # Commit INSERT / UPDATE / DELETE
-            connection.commit()
+            if commit:
+                connection.commit()
 
             logger.info(f"PostgreSQL command executed successfully for {len(params)} rows.")
             affected_rows = cursor.rowcount
@@ -311,7 +316,7 @@ class MySQLService(DatabaseService):
             logger.error(f"Unable to get connection from server pool. {e}")
             return None
     
-    def ExecuteQuery(self, query: str, params: tuple = None, expects_return: bool = True) -> tuple[Any, RC]:
+    def ExecuteQuery(self, query: str, params: tuple = None, expects_return: bool = True, commit: bool = True) -> tuple[Any, RC]:
         """This method will execute a string MySQL query."""
         
         # Get connection from pool
@@ -336,6 +341,9 @@ class MySQLService(DatabaseService):
             # Get returned results from server
             if expects_return:
                 results = cursor.fetchall()
+            
+            if commit:
+                connection.commit()
             logger.info(f"MySQL command executed successfully.")
             
         except Exception as e:
@@ -354,6 +362,7 @@ class MySQLService(DatabaseService):
         self,
         query: str,
         params: list[tuple],
+        commit: bool = True,
     ) -> tuple[Any, RC]:
         """Execute a MySQL query with multiple sets of parameters."""
 
@@ -372,7 +381,8 @@ class MySQLService(DatabaseService):
             cursor.executemany(query, params)
 
             # Commit INSERT / UPDATE / DELETE
-            connection.commit()
+            if commit:
+                connection.commit()
 
             logger.info(f"MySQL command executed successfully for {len(params)} rows.")
             affected_rows = cursor.rowcount
